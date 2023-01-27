@@ -1,14 +1,19 @@
 import struct
 
-def write_wave_raw(filename, data):
+"""
+Read and write wave file
 
-    """ RIFF-Header: 
-    'RIFF' - 4 bytes
-    'file size' - 4 bytes
-    'WAVE' - 4 bytes
+# Credit: modified code snippet from https://gist.github.com/chief7/54873e6e7009a087180902cb1f4e27be
+"""
+
+def write_wave_raw(filename, nchannels, bits_per_sample, sample_rate, data): 
+    
     """
-    # TODO FILL SIZE
-    riff_header = struct.pack("<4sI4s", bytes("RIFF", "utf-8"), 446328, bytes("WAVE", "utf-8"))
+    Data part
+    'data' - 4 bytes, header
+    len of data - 4 bytes
+    """
+    data_header = struct.pack("<4sI", bytes("data", "utf-8"), len(data))
 
     """
     Format header:
@@ -24,9 +29,6 @@ def write_wave_raw(filename, data):
     fmt = bytes("fmt ", "utf-8")
     header_length = 16
     fmt_tag = 1
-    nchannels = 2
-    sample_rate = 44100
-    bits_per_sample = 16
     block_align = (bits_per_sample * nchannels) // 8
     bytes_per_second = (sample_rate * bits_per_sample * nchannels) // 8
 
@@ -34,12 +36,13 @@ def write_wave_raw(filename, data):
                              nchannels, sample_rate, bytes_per_second, 
                              block_align, bits_per_sample)
 
+    """ RIFF-Header: 
+    'RIFF' - 4 bytes
+    'file size' - 4 bytes
+    'WAVE' - 4 bytes
     """
-    Data part
-    'data' - 4 bytes, header
-    len of data - 4 bytes
-    """
-    data_header = struct.pack("<4sI", bytes("data", "utf-8"), len(data))
+    filesize = 4 + len(fmt_header) + len(data_header) + len(data) 
+    riff_header = struct.pack("<4sI4s", bytes("RIFF", "utf-8"), filesize, bytes("WAVE", "utf-8"))
 
     with open(filename, "wb") as wav:
         wav.write(riff_header)

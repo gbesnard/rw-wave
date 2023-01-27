@@ -1,4 +1,6 @@
 venv
 __pycache__
 *.wav
-!in.wav
+!signal.wav
+samples
+*.png
