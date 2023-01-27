@@ -90,15 +90,15 @@ def read_wave_raw(filename):
 
         assert head.decode("utf-8") == "data"
 
-        data = b""
+        data = bytearray()
 
         while True:
             chunk = wav.read(samplerate)
-            data += chunk
+            data.extend(chunk)
 
             if len(chunk) < samplerate or len(data) >= data_len:
                 # it's possible to encounter another data section you should handle it
                 break
 
-        return data, nchannels, samplerate, dtype
+        return bytes(data), nchannels, samplerate, dtype
 

@@ -8,10 +8,10 @@ def plot_signal_2_channels(data_1, data_2,
                            samplerate, sharey,
                            filename, suptitle):
 
-    assert len(data_1) == len(data_2)
     assert dtype_1 == 32 or dtype_1 == 24 or dtype_1 == 16 or dtype_1 == 8
     assert dtype_2 == 32 or dtype_2 == 24 or dtype_2 == 16 or dtype_2 == 8
 
+    assert(len(data_1), len(data_2))
     n = len(data_1)
     t = n // samplerate
 
@@ -35,8 +35,8 @@ def plot_signal_2_channels(data_1, data_2,
     with plt.xkcd():
         fig, axs = plt.subplots(2, sharex=True, sharey=sharey)
         fig.suptitle(suptitle)
-        axs[0].plot(xpoints, ypoints_1, "b", linewidth=0.5)
-        axs[1].plot(xpoints, ypoints_2, "g", linewidth=0.5)
+        axs[0].plot(xpoints, ypoints_1, "b", linewidth=0.2)
+        axs[1].plot(xpoints, ypoints_2, "g", linewidth=0.2)
         plt.xlabel("time(s)")
         plt.ylabel("amplitude")
         plt.savefig(filename, dpi=100)
@@ -57,7 +57,7 @@ def main():
 
     chan_1_data_int = []
     chan_2_data_int = []
-    chan_1_data_bytes = b""
+    chan_1_data_bytes_array = bytearray() # use bytearray instead of bytestring for performance
     sample_size = dtype // 8 * nchannels
 
     print("number of channels: %s" % (nchannels))
@@ -75,7 +75,7 @@ def main():
         sample_offset = sample_idx * sample_size
 
         tmpbytes_1 = data[(sample_offset + 0):(sample_offset + bytes_per_sample)]
-        chan_1_data_bytes += tmpbytes_1
+        chan_1_data_bytes_array.extend(tmpbytes_1)
         chan_1_data_int.append(int.from_bytes(tmpbytes_1, byteorder="little", signed=True))
 
         if nchannels > 1:
@@ -84,6 +84,9 @@ def main():
 
         if sample_idx % 100000 == 0 or sample_idx == nb_samples - 1:
             print("%d/%d samples" % (sample_idx, nb_samples - 1))
+
+    # convert back bytearray to bytestring
+    chan_1_data_bytes = bytes(chan_1_data_bytes_array)
 
     if nchannels > 1:
         plot_signal_2_channels(chan_1_data_int, chan_2_data_int, 
