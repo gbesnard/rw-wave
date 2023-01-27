@@ -12,6 +12,16 @@ Play sound from CLI
 
     play signal.wav
 
+# Todo
+
+- Try to change sample rate
+- Try to add some gain
+- Try to add some filtering
+- 6 Channels sample parsing not working
+- Try to sample a signal which results in aliasing
+- Play with FFT
+- Compare execution time with a C program instead
+
 # Resources
 
 http://soundfile.sapp.org/doc/WaveFormat/
@@ -24,3 +34,4 @@ https://www.nasa.gov/connect/sounds/index.html
 
 https://www2.cs.uic.edu/~i101/SoundFiles/
 
+https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Samples.html

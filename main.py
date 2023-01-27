@@ -9,8 +9,8 @@ def plot_signal_2_channels(data_1, data_2,
                            filename, suptitle):
 
     assert len(data_1) == len(data_2)
-    assert dtype_1 == 16 or dtype_1 == 8
-    assert dtype_2 == 16 or dtype_2 == 8
+    assert dtype_1 == 32 or dtype_1 == 24 or dtype_1 == 16 or dtype_1 == 8
+    assert dtype_2 == 32 or dtype_2 == 24 or dtype_2 == 16 or dtype_2 == 8
 
     n = len(data_1)
     t = n // samplerate
@@ -22,15 +22,15 @@ def plot_signal_2_channels(data_1, data_2,
         they are specified as unsigned values. 
         All other sample bit-sizes are specified as signed values.
     """
-    if (dtype_1 == 16):
-        ypoints_1 = np.array(data_1).astype(np.int16)
-    elif (dtype_1 == 8):
+    if (dtype_1 == 8):
         ypoints_1 = np.array(data_1).astype(np.uint8)
+    else: 
+        ypoints_1 = np.array(data_1).astype(np.int32)
 
-    if (dtype_2 == 16):
-        ypoints_2 = np.array(data_2).astype(np.int16)
-    elif (dtype_2 == 8):
+    if (dtype_2 == 8):
         ypoints_2 = np.array(data_2).astype(np.uint8)
+    else:
+        ypoints_2 = np.array(data_2).astype(np.int32)
 
     with plt.xkcd():
         fig, axs = plt.subplots(2, sharex=True, sharey=sharey)
@@ -53,7 +53,7 @@ def main():
     data, nchannels, samplerate, dtype = read_wave_raw("signal.wav")
 
     # check that each channels has the same number of bytes
-    assert ((len(data) / nchannels) % 2) == 0
+    # assert ((len(data) / nchannels) % 2) == 0
 
     chan_1_data_int = []
     chan_2_data_int = []
@@ -66,21 +66,23 @@ def main():
     print("         data size: %s bytes" % (len(data)))
     print("       sample size: %s bytes" % (sample_size))
 
-    # build an array for each channel data
+    print("\nbuild an array for each channel data...")
     assert nchannels <= 2
     nb_samples = len(data) // sample_size
+    bytes_per_sample = dtype // 8
+
     for sample_idx in range(nb_samples):
         sample_offset = sample_idx * sample_size
 
-        tmpbytes_1 = data[(sample_offset + 0):(sample_offset + 2)]
+        tmpbytes_1 = data[(sample_offset + 0):(sample_offset + bytes_per_sample)]
         chan_1_data_bytes += tmpbytes_1
         chan_1_data_int.append(int.from_bytes(tmpbytes_1, byteorder="little", signed=True))
 
         if nchannels > 1:
-            tmpbytes_2 = data[(sample_offset + 2):(sample_offset + 4)]
+            tmpbytes_2 = data[(sample_offset + bytes_per_sample):(sample_offset + bytes_per_sample * 2)]
             chan_2_data_int.append(int.from_bytes(tmpbytes_2, byteorder="little", signed=True))
 
-        if sample_idx % 10000 == 0 or sample_idx == nb_samples - 1:
+        if sample_idx % 100000 == 0 or sample_idx == nb_samples - 1:
             print("%d/%d samples" % (sample_idx, nb_samples - 1))
 
     if nchannels > 1:
@@ -90,11 +92,14 @@ def main():
                                "signal-channels.png", "Channels 1 and 2")
 
     print("\ncopy signal.wav into signal-copy.wav...")
-    assert dtype == 16
     write_wave_raw("signal-copy.wav", nchannels, dtype, samplerate, data)
 
     print("\nexport signal.wav channel 1 to signal-chan1.wav...")
     write_wave_raw("signal-chan1.wav", 1, dtype, samplerate, chan_1_data_bytes)
+
+    if dtype != 16:
+        print("cannot yet convert from 24 or 32 to 8 bits, exiting...")
+        exit(1)
 
     print("\ndecrease signal-chan1.wav bit depth from 16 to 8")
     print("and export it in signal-8bits.wav...")
