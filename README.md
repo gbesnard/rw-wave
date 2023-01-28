@@ -15,6 +15,7 @@ Play sound from CLI
 # Todo
 
 - Try to change sample rate
+- Merge two channels into one
 - Try to add some gain
 - Try to add some filtering
 - 6 Channels sample parsing not working
