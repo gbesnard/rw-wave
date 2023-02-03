@@ -6,6 +6,7 @@ Simple python script which:
     - Import a .wav file and instantiate a Python object with it
     - Convert .wav file to different bit depths
     - Convert stereo .wav to mono
+    - Change dB gain of a .wav
     - Display audio signal to useless xkcd style plots
 
 # Tools
@@ -22,14 +23,13 @@ Play sound from CLI
 
     play signal.wav
 
-## Audacity
+# Audacity
 
 Swiss army knife tool for audio files (view, manipulation, conversion)
 
 # Todo
 
 - Try to change sample rate
-- Try to add some gain
 - Try to add some filtering
 - 6 Channels sample parsing not working
 - Try to sample a signal which results in aliasing
@@ -49,3 +49,5 @@ https://www.nasa.gov/connect/sounds/index.html
 https://www2.cs.uic.edu/~i101/SoundFiles/
 
 https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Samples.html
+
+https://stackoverflow.com/questions/1149092/how-do-i-attenuate-a-wav-file-by-a-given-decibel-value

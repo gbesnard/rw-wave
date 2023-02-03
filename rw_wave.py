@@ -181,13 +181,7 @@ class Wave:
         print("       sample size: %s bytes" % (self.samplesize))
 
 
-    def write_and_plot(self, output_folder, chan1_only=False):
-        nchans = 2
-        nchans = self.nchannels
-        if chan1_only == True:
-            nchans = 1
-
-        filename = "signal-%dbits-%dchan" % (self.dtype, nchans)
+    def write_and_plot(self, output_folder, filename, chan1_only=False):
         filename_png = "%s.png" % (filename)
         filename_wav = "%s.wav" % (filename)
 
@@ -210,6 +204,7 @@ class Wave:
         chan_1_data_bytes_array = bytearray() # use bytearray instead of bytestring for performance
         chan_2_data_bytes_array = bytearray() 
 
+        print("")
         for sample_idx in range(nb_samples):
             sample_offset = sample_idx * self.samplesize
 
@@ -221,8 +216,9 @@ class Wave:
                 chan_2_data_bytes_array.extend(tmpbytes_2)
 
             if sample_idx % 100000 == 0 or sample_idx == nb_samples - 1:
-                print("%d/%d samples" % (sample_idx, nb_samples - 1))
+                print("\r%d/%d samples..." % (sample_idx, nb_samples - 1), end='', flush=True)
 
+        print("")
         # convert back bytearray to bytestring
         self.chan_1_data_bytes = bytes(chan_1_data_bytes_array)
         self.chan_2_data_bytes = bytes(chan_2_data_bytes_array)
@@ -245,27 +241,10 @@ class Wave:
         return chan_1_data_int, chan_2_data_int
 
 
-    def get_min_max_from_dtype(self, dtype):
-        """
-        /!\ When samples are represented with 8-bits, 
-        they are specified as unsigned values.
-        All other sample bit-sizes are specified as signed values.
-        """
-        assert dtype == 32 or dtype == 24 or dtype == 16 or dtype == 8
-        if dtype == 8:
-            return 255, 0
-        elif dtype == 16:
-            return 32767, -32768
-        elif dtype == 24:
-            return 8388607, -8388608
-        else:
-            return 2147483647, -2147483648
-
-
     def convert_to_dtype(self, to_dtype):
         assert to_dtype == 32 or to_dtype == 24 or to_dtype == 16 or to_dtype == 8
 
-        print("\nconvert from bit depth %d to %d...\n" % (self.dtype, to_dtype))
+        print("\nconvert from bit depth %d to %d..." % (self.dtype, to_dtype))
 
         if self.dtype < to_dtype:
             return -1
@@ -288,8 +267,8 @@ class Wave:
                 from_signed = False
 
 
-            new_max, new_min = self.get_min_max_from_dtype(to_dtype)
-            old_max, old_min = self.get_min_max_from_dtype(self.dtype)
+            new_max, new_min = get_max_min_from_dtype(to_dtype)
+            old_max, old_min = get_max_min_from_dtype(self.dtype)
 
             old_range = (old_max - old_min)  
             new_range = (new_max - new_min)  
@@ -301,6 +280,7 @@ class Wave:
             new_bytes_array = bytearray()
 
             # loop through data bytes and convert
+            print("")
             for sample_idx in range(nb_samples):
                 sample_offset = sample_idx * self.samplesize
 
@@ -318,7 +298,9 @@ class Wave:
                     new_bytes_array.extend(tmpbytes_scaled)
 
                 if sample_idx % 100000 == 0 or sample_idx == nb_samples - 1:
-                    print("%d/%d samples" % (sample_idx, nb_samples - 1))
+                    print("\r%d/%d samples..." % (sample_idx, nb_samples - 1), end='', flush=True)
+
+            print("")
 
             self.data_bytes = bytes(new_bytes_array)
             
@@ -327,7 +309,7 @@ class Wave:
             self.samplesize = self.dtype // 8 * self.nchannels
 
             # update each channels buffer
-            print("\ndata conversion done, update each channels buffer...\n")
+            print("\ndata conversion done, update each channels buffer...")
             self.get_data_foreach_channels()
             
             return 0
@@ -336,7 +318,7 @@ class Wave:
     def convert_to_mono(self):
         assert self.nchannels <= 2
 
-        print("\nconvert from %d channels to mono...\n" % (self.nchannels))
+        print("\nconvert from %d channels to mono..." % (self.nchannels))
         if self.nchannels < 2:
             print("file already has only one channel")
             return -1
@@ -355,6 +337,7 @@ class Wave:
             new_bytes_array = bytearray()
 
             # loop through data bytes and convert
+            print("")
             for sample_idx in range(nb_samples):
                 sample_offset = sample_idx * self.samplesize
 
@@ -369,7 +352,9 @@ class Wave:
                 new_bytes_array.extend(tmpbytes)
 
                 if sample_idx % 100000 == 0 or sample_idx == nb_samples - 1:
-                    print("%d/%d samples" % (sample_idx, nb_samples - 1))
+                    print("\r%d/%d samples..." % (sample_idx, nb_samples - 1), end='', flush=True)
+            
+            print("")
 
             self.data_bytes = bytes(new_bytes_array)
 
@@ -377,44 +362,148 @@ class Wave:
             self.nchannels = 1
 
             # update each channels buffer
-            print("\ndata conversion done, update each channels buffer...\n")
+            print("\ndata conversion done, update each channels buffer...")
             self.chan_1_data_bytes = self.data_bytes
             self.chan_2_data_bytes = b""
 
             return 0
 
 
+    def convert_gain(self, gain_dB):
+        print("\nconvert with gain %ddB..." % (gain_dB))
+        """
+        /!\ When samples are represented with 8-bits, 
+            they are specified as unsigned values.
+            All other sample bit-sizes are specified as signed values.
+        """
+        signed = True
+        if self.dtype == 8:
+            signed = False
+
+        max_int, min_int = get_max_min_from_dtype(self.dtype)
+
+        bytes_per_sample = self.dtype // 8
+        nb_data = len(self.data_bytes) // bytes_per_sample
+        new_bytes_array = bytearray()
+
+        # Gain_dB = 20 log_10(out/in) => out = in * 10^(Gain_dB / 20)
+        ratio = pow(10, (gain_dB / 20))
+
+        # loop through data bytes and convert
+        print("")
+        for data_idx in range(nb_data):
+            data_offset = data_idx * bytes_per_sample
+
+            tmpbytes = self.data_bytes[(data_offset + 0):(data_offset + bytes_per_sample)]
+            tmpint = int.from_bytes(tmpbytes, byteorder="little", signed=signed)
+            tmpint = int(tmpint * ratio)
+
+            if (tmpint > max_int):
+                tmpint = max_int
+            elif (tmpint < min_int):
+                tmpint = min_int
+
+            tmpbytes = tmpint.to_bytes(bytes_per_sample, 'little', signed=signed)
+            new_bytes_array.extend(tmpbytes)
+
+            if data_idx % 100000 == 0 or data_idx == nb_data - 1:
+                print("\r%d/%d data..." % (data_idx, nb_data - 1), end='', flush=True)
+        
+        print("")
+
+        self.data_bytes = bytes(new_bytes_array)
+
+        # update each channels buffer
+        print("\ndata conversion done, update each channels buffer...")
+        self.get_data_foreach_channels()
+
+        return 0
+
+
+def get_max_min_from_dtype(dtype):
+    """
+    /!\ When samples are represented with 8-bits, 
+    they are specified as unsigned values.
+    All other sample bit-sizes are specified as signed values.
+    """
+    assert dtype == 32 or dtype == 24 or dtype == 16 or dtype == 8
+    if dtype == 8:
+        return 255, 0
+    elif dtype == 16:
+        return 32767, -32768
+    elif dtype == 24:
+        return 8388607, -8388608
+    else:
+        return 2147483647, -2147483648
+
+
 def bit_depth_conversion(wave):
+    filename = "signal-original-%dbits-%dchan" % (wave.dtype, wave.nchannels)
+    wave.write_and_plot("output/bit-depth-conversion", filename, False) # use every channels
+
     res = wave.convert_to_dtype(32)
     if res != -1:
         wave.print_info() 
-        wave.write_and_plot("output/bit-depth-conversion", False) # use every channels
-        wave.write_and_plot("output/bit-depth-conversion", True)  # use only channel 1
+        filename = "signal-%dbits-%dchan" % (wave.dtype, wave.nchannels)
+        wave.write_and_plot("output/bit-depth-conversion", filename, False) # use every channels
+        filename = "signal-%dbits-%dchan" % (wave.dtype, 1)
+        wave.write_and_plot("output/bit-depth-conversion", filename, True)  # use only channel 1
 
     res = wave.convert_to_dtype(24)
     if res != -1:
         wave.print_info() 
-        wave.write_and_plot("output/bit-depth-conversion", False) # use every channels
-        wave.write_and_plot("output/bit-depth-conversion", True)  # use only channel 1
+        filename = "signal-%dbits-%dchan" % (wave.dtype, wave.nchannels)
+        wave.write_and_plot("output/bit-depth-conversion", filename, False) # use every channels
+        filename = "signal-%dbits-%dchan" % (wave.dtype, 1)
+        wave.write_and_plot("output/bit-depth-conversion", filename, True)  # use only channel 1
 
     res = wave.convert_to_dtype(16)
     if res != -1:
         wave.print_info() 
-        wave.write_and_plot("output/bit-depth-conversion", False) # use every channels
-        wave.write_and_plot("output/bit-depth-conversion", True)  # use only channel 1
+        filename = "signal-%dbits-%dchan" % (wave.dtype, wave.nchannels)
+        wave.write_and_plot("output/bit-depth-conversion", filename, False) # use every channels
+        filename = "signal-%dbits-%dchan" % (wave.dtype, 1)
+        wave.write_and_plot("output/bit-depth-conversion", filename, True)  # use only channel 1
 
     res = wave.convert_to_dtype(8)
     if res != -1:
         wave.print_info() 
-        wave.write_and_plot("output/bit-depth-conversion", False) # use every channels
-        wave.write_and_plot("output/bit-depth-conversion", True)  # use only channel 1
+        filename = "signal-%dbits-%dchan" % (wave.dtype, wave.nchannels)
+        wave.write_and_plot("output/bit-depth-conversion", filename, False) # use every channels
+        filename = "signal-%dbits-%dchan" % (wave.dtype, 1)
+        wave.write_and_plot("output/bit-depth-conversion", filename, True)  # use only channel 1
 
 
 def mono_conversion(wave):
+    filename = "signal-original-%dchan" % (wave.nchannels)
+    wave.write_and_plot("output/mono-conversion", filename, False) # use every channels
+
     res = wave.convert_to_mono()
     if res != -1:
         wave.print_info()    
-        wave.write_and_plot("output/mono-conversion")
+        filename = "signal-%dchan" % (wave.nchannels)
+        wave.write_and_plot("output/mono-conversion", filename)
+
+
+def gain_conversion(wave):
+    filename = "signal-original"
+    wave.write_and_plot("output/gain-conversion", filename, False) # use every channels
+    
+    wave_copy = copy.deepcopy(wave) # make a copy and keep the original
+
+    gain = 10
+    res = wave.convert_gain(gain)
+    if res != -1:
+       wave.print_info()    
+       filename = "signal-gain-%ddB" % (gain)
+       wave.write_and_plot("output/gain-conversion", filename)
+
+    gain = -10
+    res = wave_copy.convert_gain(gain)
+    if res != -1:
+        wave_copy.print_info()    
+        filename = "signal-gain-minus-%ddB" % (gain * -1)
+        wave_copy.write_and_plot("output/gain-conversion", filename)
 
 
 def main():
@@ -425,18 +514,16 @@ def main():
     wave_orig = Wave()
     wave_orig.init_from_file("signal.wav")
     wave_orig.print_info() 
-    wave_orig.write_and_plot("output", False) # use every channels
 
-    # make a copy and keep the original
-    wave = copy.deepcopy(wave_orig)
+    wave = copy.deepcopy(wave_orig) # make a copy and keep the original
+    bit_depth_conversion(wave)
 
-    # bit_depth_conversion(wave)
-
-    # make a copy and keep the original
-    wave = copy.deepcopy(wave_orig)
-
+    wave = copy.deepcopy(wave_orig) # make a copy and keep the original
     mono_conversion(wave)
     
+    wave = copy.deepcopy(wave_orig) # make a copy and keep the original
+    gain_conversion(wave)
+
 
 if __name__ == "__main__":
     main()
