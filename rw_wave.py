@@ -10,7 +10,7 @@ class Wave:
         print("")
 
     def init_from_file(self, filename):
-        print("\nread wave file %s...\n" % (filename))
+        print("read wave file %s..." % (filename))
 
         with open(filename, "rb") as wav:
             """ RIFF-Header: 
@@ -69,7 +69,6 @@ class Wave:
             self.dtype = dtype
             self.samplesize = dtype // 8 * nchannels
 
-            print("\nbuild an array for each channel data...")
             self.get_data_foreach_channels()
 
 
@@ -194,6 +193,7 @@ class Wave:
 
     def get_data_foreach_channels(self):
         assert self.nchannels <= 2
+
         nb_samples = len(self.data_bytes) // self.samplesize
         bytes_per_sample = self.dtype // 8
         
@@ -204,7 +204,6 @@ class Wave:
         chan_1_data_bytes_array = bytearray() # use bytearray instead of bytestring for performance
         chan_2_data_bytes_array = bytearray() 
 
-        print("")
         for sample_idx in range(nb_samples):
             sample_offset = sample_idx * self.samplesize
 
@@ -215,10 +214,6 @@ class Wave:
                 tmpbytes_2 = self.data_bytes[(sample_offset + bytes_per_sample):(sample_offset + bytes_per_sample * 2)]
                 chan_2_data_bytes_array.extend(tmpbytes_2)
 
-            if sample_idx % 100000 == 0 or sample_idx == nb_samples - 1:
-                print("\r%d/%d samples..." % (sample_idx, nb_samples - 1), end='', flush=True)
-
-        print("")
         # convert back bytearray to bytestring
         self.chan_1_data_bytes = bytes(chan_1_data_bytes_array)
         self.chan_2_data_bytes = bytes(chan_2_data_bytes_array)
@@ -243,8 +238,10 @@ class Wave:
 
     def convert_to_dtype(self, to_dtype):
         assert to_dtype == 32 or to_dtype == 24 or to_dtype == 16 or to_dtype == 8
-
-        print("\nconvert from bit depth %d to %d..." % (self.dtype, to_dtype))
+        
+        conv_msg = "convert from bit depth %d to %d... " % (self.dtype, to_dtype)
+        print("")
+        print(conv_msg, end='')
 
         if self.dtype < to_dtype:
             return -1
@@ -280,7 +277,6 @@ class Wave:
             new_bytes_array = bytearray()
 
             # loop through data bytes and convert
-            print("")
             for sample_idx in range(nb_samples):
                 sample_offset = sample_idx * self.samplesize
 
@@ -297,8 +293,9 @@ class Wave:
                     tmpbytes_scaled = tmpintscaled.to_bytes(new_bytes_per_sample, 'little', signed=to_signed)
                     new_bytes_array.extend(tmpbytes_scaled)
 
+                
                 if sample_idx % 100000 == 0 or sample_idx == nb_samples - 1:
-                    print("\r%d/%d samples..." % (sample_idx, nb_samples - 1), end='', flush=True)
+                    progress_bar(conv_msg, sample_idx + 1, nb_samples)
 
             print("")
 
@@ -309,7 +306,6 @@ class Wave:
             self.samplesize = self.dtype // 8 * self.nchannels
 
             # update each channels buffer
-            print("\ndata conversion done, update each channels buffer...")
             self.get_data_foreach_channels()
             
             return 0
@@ -318,7 +314,10 @@ class Wave:
     def convert_to_mono(self):
         assert self.nchannels <= 2
 
-        print("\nconvert from %d channels to mono..." % (self.nchannels))
+        conv_msg = "convert from %d channels to mono..." % (self.nchannels)
+        print("")
+        print(conv_msg, end='')
+
         if self.nchannels < 2:
             print("file already has only one channel")
             return -1
@@ -337,7 +336,6 @@ class Wave:
             new_bytes_array = bytearray()
 
             # loop through data bytes and convert
-            print("")
             for sample_idx in range(nb_samples):
                 sample_offset = sample_idx * self.samplesize
 
@@ -352,7 +350,7 @@ class Wave:
                 new_bytes_array.extend(tmpbytes)
 
                 if sample_idx % 100000 == 0 or sample_idx == nb_samples - 1:
-                    print("\r%d/%d samples..." % (sample_idx, nb_samples - 1), end='', flush=True)
+                    progress_bar(conv_msg, sample_idx + 1, nb_samples)
             
             print("")
 
@@ -362,7 +360,6 @@ class Wave:
             self.nchannels = 1
 
             # update each channels buffer
-            print("\ndata conversion done, update each channels buffer...")
             self.chan_1_data_bytes = self.data_bytes
             self.chan_2_data_bytes = b""
 
@@ -370,7 +367,10 @@ class Wave:
 
 
     def convert_gain(self, gain_dB):
-        print("\nconvert with gain %ddB..." % (gain_dB))
+        conv_msg = "convert with gain %ddB..." % (gain_dB)
+        print("")
+        print(conv_msg, end='')
+
         """
         /!\ When samples are represented with 8-bits, 
             they are specified as unsigned values.
@@ -390,7 +390,6 @@ class Wave:
         ratio = pow(10, (gain_dB / 20))
 
         # loop through data bytes and convert
-        print("")
         for data_idx in range(nb_data):
             data_offset = data_idx * bytes_per_sample
 
@@ -407,17 +406,31 @@ class Wave:
             new_bytes_array.extend(tmpbytes)
 
             if data_idx % 100000 == 0 or data_idx == nb_data - 1:
-                print("\r%d/%d data..." % (data_idx, nb_data - 1), end='', flush=True)
+                progress_bar(conv_msg, data_idx + 1, nb_data)
         
         print("")
 
         self.data_bytes = bytes(new_bytes_array)
 
         # update each channels buffer
-        print("\ndata conversion done, update each channels buffer...")
         self.get_data_foreach_channels()
 
         return 0
+
+
+def progress_bar(txt, curr, total):
+    txt_placeholder_len = 50
+    bar_width = 20
+    assert len(txt) < txt_placeholder_len
+    ratio_done = curr/total
+    nb_progress = int(ratio_done * bar_width)
+    space_after_txt = txt_placeholder_len - len(txt)
+    percent_str = str(int(ratio_done * 100))
+    print("\r%s%s" % (txt, " " * space_after_txt), end='')
+    print("[%s" % ("#" * nb_progress), end='')
+    print("%s]" % (" " * (bar_width - nb_progress)), end='')
+    print(" %s" % (" " * (3 - len(percent_str))), end='')
+    print("%s%%" % (percent_str), end='', flush=True)
 
 
 def get_max_min_from_dtype(dtype):
