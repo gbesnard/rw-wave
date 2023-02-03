@@ -1,3 +1,13 @@
+# Introduction
+
+Learning project to have a feeling about how audio is digitized, stored, and manipulated.
+
+Simple python script which:
+    - Import a .wav file and instantiate a Python object with it
+    - Convert .wav file to different bit depths
+    - Convert stereo .wav to mono
+    - Display audio signal to useless xkcd style plots
+
 # Tools
 
 ## Soxi
@@ -12,10 +22,13 @@ Play sound from CLI
 
     play signal.wav
 
+## Audacity
+
+Swiss army knife tool for audio files (view, manipulation, conversion)
+
 # Todo
 
 - Try to change sample rate
-- Merge two channels into one
 - Try to add some gain
 - Try to add some filtering
 - 6 Channels sample parsing not working

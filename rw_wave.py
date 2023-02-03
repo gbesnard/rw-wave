@@ -181,12 +181,12 @@ class Wave:
         print("       sample size: %s bytes" % (self.samplesize))
 
 
-    def write_and_plot(self, chan1_only=False):
+    def write_and_plot(self, output_folder, chan1_only=False):
         nchans = 2
+        nchans = self.nchannels
         if chan1_only == True:
             nchans = 1
 
-        output_folder = "output"
         filename = "signal-%dbits-%dchan" % (self.dtype, nchans)
         filename_png = "%s.png" % (filename)
         filename_wav = "%s.wav" % (filename)
@@ -230,7 +230,7 @@ class Wave:
 
     # converts channels bytes data to int and return one array for both channels
     def get_channels_data_int(self):
-        assert len(self.chan_1_data_bytes) == len(self.chan_2_data_bytes)
+        assert self.nchannels == 1 or len(self.chan_1_data_bytes) == len(self.chan_2_data_bytes)
         chan_1_data_int = []
         chan_2_data_int = []
         byte_depth = self.dtype // 8
@@ -268,14 +268,13 @@ class Wave:
         print("\nconvert from bit depth %d to %d...\n" % (self.dtype, to_dtype))
 
         if self.dtype < to_dtype:
-            print("cannot convert to a higher bit depth (TODO: or can we?)")
             return -1
         elif self.dtype == to_dtype:
             print("already at the right bit depth")
             return -1
         else:
+            # Scale our bits range to our new bit range.
             """
-            Scale our bits range to our new bit range.our 16 bits range to our new 8 bit range.
             /!\ When samples are represented with 8-bits, 
                 they are specified as unsigned values.
                 All other sample bit-sizes are specified as signed values.
@@ -306,14 +305,14 @@ class Wave:
                 sample_offset = sample_idx * self.samplesize
 
                 tmpbytes = self.data_bytes[(sample_offset + 0):(sample_offset + old_bytes_per_sample)]
-                tmpint = int.from_bytes(tmpbytes, byteorder="little", signed=True)
+                tmpint = int.from_bytes(tmpbytes, byteorder="little", signed=from_signed)
                 tmpintscaled = (((tmpint - old_min) * new_range) // old_range) + new_min
                 tmpbytes_scaled = tmpintscaled.to_bytes(new_bytes_per_sample, 'little', signed=to_signed)
                 new_bytes_array.extend(tmpbytes_scaled)
 
                 if self.nchannels > 1:
                     tmpbytes = self.data_bytes[(sample_offset + old_bytes_per_sample):(sample_offset + old_bytes_per_sample * 2)]
-                    tmpint = int.from_bytes(tmpbytes, byteorder="little", signed=True)
+                    tmpint = int.from_bytes(tmpbytes, byteorder="little", signed=from_signed)
                     tmpintscaled = (((tmpint - old_min) * new_range) // old_range) + new_min
                     tmpbytes_scaled = tmpintscaled.to_bytes(new_bytes_per_sample, 'little', signed=to_signed)
                     new_bytes_array.extend(tmpbytes_scaled)
@@ -334,73 +333,110 @@ class Wave:
             return 0
 
 
-def main():
-    # disable font warning for matplotlib
-    logging.getLogger("matplotlib.font_manager").disabled = True
+    def convert_to_mono(self):
+        assert self.nchannels <= 2
+
+        print("\nconvert from %d channels to mono...\n" % (self.nchannels))
+        if self.nchannels < 2:
+            print("file already has only one channel")
+            return -1
+        else:
+            """
+            /!\ When samples are represented with 8-bits, 
+                they are specified as unsigned values.
+                All other sample bit-sizes are specified as signed values.
+            """
+            signed = True
+            if self.dtype == 8:
+                signed = False
+
+            bytes_per_sample = self.dtype // 8
+            nb_samples = len(self.data_bytes) // self.samplesize
+            new_bytes_array = bytearray()
+
+            # loop through data bytes and convert
+            for sample_idx in range(nb_samples):
+                sample_offset = sample_idx * self.samplesize
+
+                tmpbytes_c1 = self.data_bytes[(sample_offset + 0):(sample_offset + bytes_per_sample)]
+                tmpint_c1 = int.from_bytes(tmpbytes_c1, byteorder="little", signed=signed)
+    
+                tmpbytes_c2 = self.data_bytes[(sample_offset + bytes_per_sample):(sample_offset + bytes_per_sample * 2)]
+                tmpint_c2 = int.from_bytes(tmpbytes_c2, byteorder="little", signed=signed)
+    
+                tmpint = (tmpint_c1 + tmpint_c2) // 2
+                tmpbytes = tmpint.to_bytes(bytes_per_sample, 'little', signed=signed)
+                new_bytes_array.extend(tmpbytes)
+
+                if sample_idx % 100000 == 0 or sample_idx == nb_samples - 1:
+                    print("%d/%d samples" % (sample_idx, nb_samples - 1))
+
+            self.data_bytes = bytes(new_bytes_array)
+
+            # data conversion done, update info
+            self.nchannels = 1
+
+            # update each channels buffer
+            print("\ndata conversion done, update each channels buffer...\n")
+            self.chan_1_data_bytes = self.data_bytes
+            self.chan_2_data_bytes = b""
+
+            return 0
 
 
-    # data, nchannels, samplerate, dtype = read_wave_raw("signal.wav")
-    wave = Wave()
-    wave.init_from_file("signal.wav")
-    wave.print_info() 
-    wave.write_and_plot(False) # use every channels
-    wave.write_and_plot(True)  # use only channel 1
-
+def bit_depth_conversion(wave):
     res = wave.convert_to_dtype(32)
     if res != -1:
         wave.print_info() 
-        wave.write_and_plot(False) # use every channels
-        wave.write_and_plot(True)  # use only channel 1
+        wave.write_and_plot("output/bit-depth-conversion", False) # use every channels
+        wave.write_and_plot("output/bit-depth-conversion", True)  # use only channel 1
 
     res = wave.convert_to_dtype(24)
     if res != -1:
         wave.print_info() 
-        wave.write_and_plot(False) # use every channels
-        wave.write_and_plot(True)  # use only channel 1
+        wave.write_and_plot("output/bit-depth-conversion", False) # use every channels
+        wave.write_and_plot("output/bit-depth-conversion", True)  # use only channel 1
 
     res = wave.convert_to_dtype(16)
     if res != -1:
         wave.print_info() 
-        wave.write_and_plot(False) # use every channels
-        wave.write_and_plot(True)  # use only channel 1
+        wave.write_and_plot("output/bit-depth-conversion", False) # use every channels
+        wave.write_and_plot("output/bit-depth-conversion", True)  # use only channel 1
 
     res = wave.convert_to_dtype(8)
     if res != -1:
         wave.print_info() 
-        wave.write_and_plot(False) # use every channels
-        wave.write_and_plot(True)  # use only channel 1
+        wave.write_and_plot("output/bit-depth-conversion", False) # use every channels
+        wave.write_and_plot("output/bit-depth-conversion", True)  # use only channel 1
 
 
-
-    """
-    TODO DO NOT WORK WITH COPY, WHY ?
-    wave_copy = copy.deepcopy(wave)
-    res = wave_copy.convert_to_dtype(32)
+def mono_conversion(wave):
+    res = wave.convert_to_mono()
     if res != -1:
-        wave_copy.print_info() 
-        wave_copy.write_and_plot(False) # use every channels
-        wave_copy.write_and_plot(True)  # use only channel 1
+        wave.print_info()    
+        wave.write_and_plot("output/mono-conversion")
 
-    wave_copy = copy.deepcopy(wave)
-    res = wave_copy.convert_to_dtype(24)
-    if res != -1:
-        wave_copy.print_info() 
-        wave_copy.write_and_plot(False) # use every channels
-        wave_copy.write_and_plot(True)  # use only channel 1
-    wave_copy = copy.deepcopy(wave)
-    res = wave_copy.convert_to_dtype(16)
-    if res != -1:
-        wave.print_info() 
-        wave.write_and_plot(False) # use every channels
-        wave.write_and_plot(True)  # use only channel 1
+
+def main():
+    # disable font warning for matplotlib
+    logging.getLogger("matplotlib.font_manager").disabled = True
+
+    # init wave object from wave file
+    wave_orig = Wave()
+    wave_orig.init_from_file("signal.wav")
+    wave_orig.print_info() 
+    wave_orig.write_and_plot("output", False) # use every channels
+
+    # make a copy and keep the original
+    wave = copy.deepcopy(wave_orig)
+
+    # bit_depth_conversion(wave)
+
+    # make a copy and keep the original
+    wave = copy.deepcopy(wave_orig)
+
+    mono_conversion(wave)
     
-    wave_copy = copy.deepcopy(wave)
-    res = wave_copy.convert_to_dtype(8)
-    if res != -1:
-        wave.print_info() 
-        wave.write_and_plot(False) # use every channels
-        wave.write_and_plot(True)  # use only channel 1
-    """
 
 if __name__ == "__main__":
     main()
