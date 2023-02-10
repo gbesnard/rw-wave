@@ -127,6 +127,26 @@ class Wave:
             wav.write(data)
 
 
+    def plot_spectre(self):
+        data_1,_  = self.get_channels_data_int()
+        xpoints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+        spectre = np.fft.fft(data_1)
+        delta_between_measure_time_s = 1 / self.samplerate
+        freq = np.fft.fftfreq(len(data_1), delta_between_measure_time_s)
+            
+        fig, axs = plt.subplots(1)
+        fig.suptitle("spectre")
+            
+        axs.plot(freq, np.real(spectre))
+
+        plt.xlabel("frequency (Hz)")
+        plt.ylabel("amplitude")
+        plt.savefig("output/spectre.png", dpi=100)
+        # plt.show()
+        plt.close()
+
+ 
     def plot_signal(self, filename, suptitle, chan1_only):
         nchans = self.nchannels
         if chan1_only == True:
@@ -244,9 +264,10 @@ class Wave:
         print(conv_msg, end='')
 
         if self.dtype < to_dtype:
+            print("skipping, won't convert to higher bit depth")
             return -1
         elif self.dtype == to_dtype:
-            print("already at the right bit depth")
+            print("skipping, already at the right bit depth")
             return -1
         else:
             # Scale our bits range to our new bit range.
@@ -527,7 +548,9 @@ def main():
     wave_orig = Wave()
     wave_orig.init_from_file("signal.wav")
     wave_orig.print_info() 
-
+    wave_orig.plot_spectre()
+    exit(0)
+    
     wave = copy.deepcopy(wave_orig) # make a copy and keep the original
     bit_depth_conversion(wave)
 

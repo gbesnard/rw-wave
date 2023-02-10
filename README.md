@@ -1,6 +1,6 @@
 # Introduction
 
-Learning project to have a feeling about how audio is digitized, stored, and manipulated.
+Learning project to get a feeling about how audio is digitized, stored, and manipulated.
 
 Simple python script which:
     - Import a .wav file and instantiate a Python object with it
@@ -31,10 +31,9 @@ Swiss army knife tool for audio files (view, manipulation, conversion)
 
 - Try to change sample rate
 - Try to add some filtering
-- 6 Channels sample parsing not working
+- Read more than two channels using FMT WAVEFORMATEXTENSIBLE format
 - Try to sample a signal which results in aliasing
 - Play with FFT
-- Compare execution time with a C program instead
 
 # Resources
 
