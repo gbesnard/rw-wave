@@ -32,7 +32,6 @@ Swiss army knife tool for audio files (view, manipulation, conversion)
 - Try to change sample rate
 - Try to add some filtering
 - Read more than two channels using FMT WAVEFORMATEXTENSIBLE format
-- Try to sample a signal which results in aliasing
 - Play with FFT
 
 # Resources
@@ -50,3 +49,5 @@ https://www2.cs.uic.edu/~i101/SoundFiles/
 https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Samples.html
 
 https://stackoverflow.com/questions/1149092/how-do-i-attenuate-a-wav-file-by-a-given-decibel-value
+
+https://stackoverflow.com/questions/70825086/python-lowpass-filter-with-only-numpy

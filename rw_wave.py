@@ -126,25 +126,64 @@ class Wave:
             wav.write(data_header)
             wav.write(data)
 
-
-    def plot_spectre(self):
-        data_1,_  = self.get_channels_data_int()
-        xpoints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    # TODO use band
+    def plot_spectre(self, band):
+        data_1, _ = self.get_channels_data_int()
 
         spectre = np.fft.fft(data_1)
         delta_between_measure_time_s = 1 / self.samplerate
         freq = np.fft.fftfreq(len(data_1), delta_between_measure_time_s)
             
-        fig, axs = plt.subplots(1)
-        fig.suptitle("spectre")
+#        fig, axs = plt.subplots(1)
+#        fig.suptitle("spectre")
             
-        axs.plot(freq, np.real(spectre))
+#        axs.plot(freq, np.real(spectre))
 
-        plt.xlabel("frequency (Hz)")
+#        plt.xlabel("frequency (Hz)")
+#        plt.ylabel("amplitude")
+#        plt.savefig("output/spectre.png", dpi=100)
+#        plt.show()
+#        plt.close()
+
+        # translate high frequency limit from Hz to index
+        lowfreq_filter_index = int(band[0] * len(data_1) / self.samplerate)
+        highfreq_filter_index = int(band[1] * len(data_1) / self.samplerate)
+    
+        # inspired from https://stackoverflow.com/questions/70825086/python-lowpass-filter-with-only-numpy
+        for i in range(highfreq_filter_index + 1, len(spectre) - highfreq_filter_index):
+            spectre[i] = 0
+        
+
+        signal_filtered = np.fft.ifft(spectre)
+        """
+        print(len(data_1))
+        print(len(signal_filtered))
+        fig, axs = plt.subplots(2, sharex=True)
+        fig.suptitle("signal_filtered")
+            
+        axs[0].plot(data_1)
+        axs[1].plot(signal_filtered)
+
+        plt.xlabel("time")
         plt.ylabel("amplitude")
-        plt.savefig("output/spectre.png", dpi=100)
-        # plt.show()
+        plt.savefig("output/fsignal_filtered.png", dpi=100)
+        plt.show()
         plt.close()
+        """
+        signal_filtered_int = np.int_(signal_filtered.real)
+        self.get_bytes_from_data_int(signal_filtered_int.tolist())
+        self.write_and_plot("output/filter-conversion", "signal_filtered", chan1_only=True)
+
+#        fig, axs = plt.subplots(1)
+#        fig.suptitle("spectre_filtered")
+#            
+#        axs.plot(freq, np.real(spectre))
+#
+#        plt.xlabel("frequency (Hz)")
+#        plt.ylabel("amplitude")
+#        plt.savefig("output/spectre_filtered.png", dpi=100)
+#        plt.show()
+#        plt.close()
 
  
     def plot_signal(self, filename, suptitle, chan1_only):
@@ -254,6 +293,62 @@ class Wave:
             chan_2_data_int.append(int.from_bytes(tmpbytes, byteorder="little", signed=True))
 
         return chan_1_data_int, chan_2_data_int
+
+
+    def get_bytes_from_data_int(self, dataint):
+        assert self.nchannels == 1
+
+        conv_msg = "get bytes from data int... "
+        print("")
+        print(conv_msg, end='')
+
+        """
+        /!\ When samples are represented with 8-bits, 
+            they are specified as unsigned values.
+            All other sample bit-sizes are specified as signed values.
+        """
+        to_signed = True
+        if self.dtype == 8:
+            to_signed = False
+
+        from_signed = True
+        if self.dtype == 8:
+            from_signed = False
+
+        nb_samples = len(self.data_bytes) // self.samplesize
+        assert abs(len(dataint) - nb_samples) <= 1
+
+        bytes_per_sample = self.dtype // 8
+        new_bytes_array = bytearray()
+
+        # loop through data bytes and use new value
+
+        maxx, minn = get_max_min_from_dtype(self.dtype) # TODO REMOVE ME
+
+        for sample_idx in range(nb_samples):
+            if (dataint[sample_idx] > maxx):
+                print(maxx)
+                print(dataint[sample_idx])
+                dataint[sample_idx] = maxx
+            elif (dataint[sample_idx] < minn):
+                print(minn)
+                print(dataint[sample_idx])
+                dataint[sample_idx] = minn
+
+            tmpbytes = dataint[sample_idx].to_bytes(bytes_per_sample, 'little', signed=to_signed)
+            new_bytes_array.extend(tmpbytes)
+
+            if sample_idx % 100000 == 0 or sample_idx == nb_samples - 1:
+                progress_bar(conv_msg, sample_idx + 1, nb_samples)
+
+        print("")
+
+        self.data_bytes = bytes(new_bytes_array)
+        
+        # update each channels buffer
+        self.get_data_foreach_channels()
+        
+        return 0
 
 
     def convert_to_dtype(self, to_dtype):
@@ -379,6 +474,7 @@ class Wave:
 
             # data conversion done, update info
             self.nchannels = 1
+            self.samplesize = self.dtype // 8 * self.nchannels
 
             # update each channels buffer
             self.chan_1_data_bytes = self.data_bytes
@@ -540,6 +636,20 @@ def gain_conversion(wave):
         wave_copy.write_and_plot("output/gain-conversion", filename)
 
 
+def filter_conversion(wave):
+    wave_copy = copy.deepcopy(wave) # make a copy and keep the original
+
+    # use mono file for practicity
+    res = wave_copy.convert_to_mono()
+
+    if res != -1:
+        filename = "signal-original"
+        wave_copy.write_and_plot("output/filter-conversion", filename, True) # use only channel 1
+        wave_copy.print_info()    
+        narrowband = [300, 3400]
+        wave_copy.plot_spectre(narrowband)
+
+
 def main():
     # disable font warning for matplotlib
     logging.getLogger("matplotlib.font_manager").disabled = True
@@ -548,9 +658,7 @@ def main():
     wave_orig = Wave()
     wave_orig.init_from_file("signal.wav")
     wave_orig.print_info() 
-    wave_orig.plot_spectre()
-    exit(0)
-    
+    """    
     wave = copy.deepcopy(wave_orig) # make a copy and keep the original
     bit_depth_conversion(wave)
 
@@ -559,6 +667,10 @@ def main():
     
     wave = copy.deepcopy(wave_orig) # make a copy and keep the original
     gain_conversion(wave)
+    """
+
+    wave = copy.deepcopy(wave_orig) # make a copy and keep the original
+    filter_conversion(wave)
 
 
 if __name__ == "__main__":
