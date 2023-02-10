@@ -126,64 +126,27 @@ class Wave:
             wav.write(data_header)
             wav.write(data)
 
-    # TODO use band
-    def plot_spectre(self, band):
+
+    def plot_spectrum(self, filename, suptitle):
+        assert self.nchannels == 1
+
         data_1, _ = self.get_channels_data_int()
 
-        spectre = np.fft.fft(data_1)
+        spectrum = np.fft.fft(data_1)
         delta_between_measure_time_s = 1 / self.samplerate
         freq = np.fft.fftfreq(len(data_1), delta_between_measure_time_s)
             
-#        fig, axs = plt.subplots(1)
-#        fig.suptitle("spectre")
-            
-#        axs.plot(freq, np.real(spectre))
+        with plt.xkcd():
+            fig, axs = plt.subplots(1)
+            fig.suptitle(suptitle)
+                
+            axs.plot(freq, np.real(spectrum))
 
-#        plt.xlabel("frequency (Hz)")
-#        plt.ylabel("amplitude")
-#        plt.savefig("output/spectre.png", dpi=100)
-#        plt.show()
-#        plt.close()
-
-        # translate high frequency limit from Hz to index
-        lowfreq_filter_index = int(band[0] * len(data_1) / self.samplerate)
-        highfreq_filter_index = int(band[1] * len(data_1) / self.samplerate)
-    
-        # inspired from https://stackoverflow.com/questions/70825086/python-lowpass-filter-with-only-numpy
-        for i in range(highfreq_filter_index + 1, len(spectre) - highfreq_filter_index):
-            spectre[i] = 0
-        
-
-        signal_filtered = np.fft.ifft(spectre)
-        """
-        print(len(data_1))
-        print(len(signal_filtered))
-        fig, axs = plt.subplots(2, sharex=True)
-        fig.suptitle("signal_filtered")
-            
-        axs[0].plot(data_1)
-        axs[1].plot(signal_filtered)
-
-        plt.xlabel("time")
-        plt.ylabel("amplitude")
-        plt.savefig("output/fsignal_filtered.png", dpi=100)
-        plt.show()
-        plt.close()
-        """
-        signal_filtered_int = np.int_(signal_filtered.real)
-        self.get_bytes_from_data_int(signal_filtered_int.tolist())
-        self.write_and_plot("output/filter-conversion", "signal_filtered", chan1_only=True)
-
-#        fig, axs = plt.subplots(1)
-#        fig.suptitle("spectre_filtered")
-#            
-#        axs.plot(freq, np.real(spectre))
-#
-#        plt.xlabel("frequency (Hz)")
-#        plt.ylabel("amplitude")
-#        plt.savefig("output/spectre_filtered.png", dpi=100)
-#        plt.show()
-#        plt.close()
+            plt.xlabel("frequency (Hz)")
+            plt.ylabel("amplitude")
+            plt.savefig(filename, dpi=100)
+            # plt.show()
+            plt.close()
 
  
     def plot_signal(self, filename, suptitle, chan1_only):
@@ -243,10 +206,10 @@ class Wave:
         filename_png = "%s.png" % (filename)
         filename_wav = "%s.wav" % (filename)
 
-        print("\nwrite %s..." % filename_wav)
+        print("\nwritting %s..." % filename_wav)
         self.save_to_file("%s/%s" % (output_folder, filename_wav), chan1_only)
 
-        print("plot %s..." % filename_png)
+        print("plotting %s..." % filename_png)
         self.plot_signal("%s/%s" % (output_folder, filename_png), filename, chan1_only)
 
 
@@ -295,10 +258,10 @@ class Wave:
         return chan_1_data_int, chan_2_data_int
 
 
-    def get_bytes_from_data_int(self, dataint):
+    def set_bytes_from_data_int(self, dataint):
         assert self.nchannels == 1
 
-        conv_msg = "get bytes from data int... "
+        conv_msg = "setting bytes from data int... "
         print("")
         print(conv_msg, end='')
 
@@ -323,17 +286,13 @@ class Wave:
 
         # loop through data bytes and use new value
 
-        maxx, minn = get_max_min_from_dtype(self.dtype) # TODO REMOVE ME
+        max_val, min_val = get_max_min_from_dtype(self.dtype)
 
         for sample_idx in range(nb_samples):
-            if (dataint[sample_idx] > maxx):
-                print(maxx)
-                print(dataint[sample_idx])
-                dataint[sample_idx] = maxx
-            elif (dataint[sample_idx] < minn):
-                print(minn)
-                print(dataint[sample_idx])
-                dataint[sample_idx] = minn
+            if (dataint[sample_idx] > max_val):
+                dataint[sample_idx] = max_val
+            elif (dataint[sample_idx] < min_val):
+                dataint[sample_idx] = min_val
 
             tmpbytes = dataint[sample_idx].to_bytes(bytes_per_sample, 'little', signed=to_signed)
             new_bytes_array.extend(tmpbytes)
@@ -351,10 +310,43 @@ class Wave:
         return 0
 
 
+    def filter_bandpass(self, band):
+        print("\nfiltering bandpass range %d to %d Hz... " % (band[0], band[1]))
+
+        data_1, _ = self.get_channels_data_int()
+
+        spectre = np.fft.fft(data_1)
+        delta_between_measure_time_s = 1 / self.samplerate
+        freq = np.fft.fftfreq(len(data_1), delta_between_measure_time_s)
+            
+        # translate high frequency limit from Hz to index
+        # TODO use low band
+        lowfreq_filter_index = int(band[0] * len(data_1) / self.samplerate)
+        highfreq_filter_index = int(band[1] * len(data_1) / self.samplerate)
+    
+        # inspired from https://stackoverflow.com/questions/70825086/python-lowpass-filter-with-only-numpy
+        # high band
+        for i in range(highfreq_filter_index + 1, len(spectre) - highfreq_filter_index):
+            spectre[i] = 0
+
+        # low band
+        for i in range(0, lowfreq_filter_index):
+            spectre[i] = 0
+
+        for i in range(len(spectre) - highfreq_filter_index, len(spectre)):
+            spectre[i] = 0
+
+        signal_filtered = np.fft.ifft(spectre)
+        signal_filtered_int = np.int_(signal_filtered.real)
+        self.set_bytes_from_data_int(signal_filtered_int.tolist())
+
+        return 0
+
+
     def convert_to_dtype(self, to_dtype):
         assert to_dtype == 32 or to_dtype == 24 or to_dtype == 16 or to_dtype == 8
         
-        conv_msg = "convert from bit depth %d to %d... " % (self.dtype, to_dtype)
+        conv_msg = "converting from bit depth %d to %d... " % (self.dtype, to_dtype)
         print("")
         print(conv_msg, end='')
 
@@ -430,7 +422,7 @@ class Wave:
     def convert_to_mono(self):
         assert self.nchannels <= 2
 
-        conv_msg = "convert from %d channels to mono..." % (self.nchannels)
+        conv_msg = "converting from %d channels to mono..." % (self.nchannels)
         print("")
         print(conv_msg, end='')
 
@@ -484,7 +476,7 @@ class Wave:
 
 
     def convert_gain(self, gain_dB):
-        conv_msg = "convert with gain %ddB..." % (gain_dB)
+        conv_msg = "converting with gain %ddB..." % (gain_dB)
         print("")
         print(conv_msg, end='')
 
@@ -637,17 +629,43 @@ def gain_conversion(wave):
 
 
 def filter_conversion(wave):
+    folder = "output/filter-conversion"
+    
     wave_copy = copy.deepcopy(wave) # make a copy and keep the original
 
     # use mono file for practicity
-    res = wave_copy.convert_to_mono()
+    wave_copy.convert_to_mono()
+    wave_copy2 = copy.deepcopy(wave_copy)
 
-    if res != -1:
-        filename = "signal-original"
-        wave_copy.write_and_plot("output/filter-conversion", filename, True) # use only channel 1
-        wave_copy.print_info()    
-        narrowband = [300, 3400]
-        wave_copy.plot_spectre(narrowband)
+    filename = "signal-original"
+    wave_copy.print_info()    
+    wave_copy.write_and_plot(folder, filename, False) # use every channels
+
+    filename = "spectrum-original"
+    print("plotting %s.png..." % filename)
+    wave_copy.plot_spectrum("%s/%s.png" % (folder, filename), filename) 
+
+    # narrowband
+    narrowband = [300, 3400]
+    wave_copy.filter_bandpass(narrowband)
+    filename = "signal-narrowband"
+    wave_copy.print_info()    
+    wave_copy.write_and_plot("output/filter-conversion", filename, False) # use every channels
+
+    filename = "spectrum-narrowband"
+    print("plotting %s.png..." % filename)
+    wave_copy.plot_spectrum("%s/%s.png" % (folder, filename), filename) 
+
+    # wideband
+    wideband = [50, 7000]
+    wave_copy2.filter_bandpass(wideband)
+    filename = "signal-wideband"
+    wave_copy2.print_info()    
+    wave_copy2.write_and_plot("output/filter-conversion", filename, False) # use every channels
+
+    filename = "spectrum-wideband"
+    print("plotting %s.png..." % filename)
+    wave_copy2.plot_spectrum("%s/%s.png" % (folder, filename), filename) 
 
 
 def main():
@@ -658,7 +676,7 @@ def main():
     wave_orig = Wave()
     wave_orig.init_from_file("signal.wav")
     wave_orig.print_info() 
-    """    
+
     wave = copy.deepcopy(wave_orig) # make a copy and keep the original
     bit_depth_conversion(wave)
 
@@ -667,7 +685,6 @@ def main():
     
     wave = copy.deepcopy(wave_orig) # make a copy and keep the original
     gain_conversion(wave)
-    """
 
     wave = copy.deepcopy(wave_orig) # make a copy and keep the original
     filter_conversion(wave)

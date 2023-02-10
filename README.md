@@ -3,11 +3,23 @@
 Learning project to get a feeling about how audio is digitized, stored, and manipulated.
 
 Simple python script which:
-    - Import a .wav file and instantiate a Python object with it
-    - Convert .wav file to different bit depths
-    - Convert stereo .wav to mono
-    - Change dB gain of a .wav
-    - Display audio signal to useless xkcd style plots
+
+- Import a .wav file and instantiate a Python object with it
+- Convert .wav file to different bit depths
+- Convert stereo .wav to mono
+- Change dB gain of a .wav
+- Bandpass filter using FFT (narrowband and wideband)
+- Display audio signal to useless xkcd style plots
+
+# Usage
+
+```
+python rw_wave.py
+```
+
+Python dependencies in `requirements.txt` files
+
+The script take a file named signal.wav in entry. It must be a .wav in PCM format, with 1 or 2 channels maximum, a bit depth of 8, 16, 24 or 32 and any sample rate should do.
 
 # Tools
 
@@ -29,10 +41,8 @@ Swiss army knife tool for audio files (view, manipulation, conversion)
 
 # Todo
 
-- Try to change sample rate
-- Try to add some filtering
+- Add some filtering using a "real" filter such as Butterworth
 - Read more than two channels using FMT WAVEFORMATEXTENSIBLE format
-- Play with FFT
 
 # Resources
 
