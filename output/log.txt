@@ -1,0 +1,110 @@
+
+read wave file signal.wav...
+
+number of channels: 2
+       sample rate: 44100 Hz
+         bit depth: 16 bits per sample
+         data size: 1458922 bytes
+       sample size: 4 bytes
+
+writting signal-original-16bits-2chan.wav...
+plotting signal-original-16bits-2chan.png...
+
+converting from bit depth 16 to 32... skipping, won't convert to higher bit depth
+
+converting from bit depth 16 to 24... skipping, won't convert to higher bit depth
+
+converting from bit depth 16 to 16... skipping, already at the right bit depth
+
+converting from bit depth 16 to 8... converting from bit depth 16 to 8...              [                    ]   0%converting from bit depth 16 to 8...              [#####               ]  27%converting from bit depth 16 to 8...              [##########          ]  54%converting from bit depth 16 to 8...              [################    ]  82%converting from bit depth 16 to 8...              [####################] 100%
+
+number of channels: 2
+       sample rate: 44100 Hz
+         bit depth: 8 bits per sample
+         data size: 729460 bytes
+       sample size: 2 bytes
+
+writting signal-8bits-2chan.wav...
+plotting signal-8bits-2chan.png...
+
+writting signal-8bits-1chan.wav...
+plotting signal-8bits-1chan.png...
+
+writting signal-original-2chan.wav...
+plotting signal-original-2chan.png...
+
+converting from 2 channels to mono...converting from 2 channels to mono...             [                    ]   0%converting from 2 channels to mono...             [#####               ]  27%converting from 2 channels to mono...             [##########          ]  54%converting from 2 channels to mono...             [################    ]  82%converting from 2 channels to mono...             [####################] 100%
+
+number of channels: 1
+       sample rate: 44100 Hz
+         bit depth: 16 bits per sample
+         data size: 729460 bytes
+       sample size: 2 bytes
+
+writting signal-1chan.wav...
+plotting signal-1chan.png...
+
+writting signal-original.wav...
+plotting signal-original.png...
+
+converting with gain 10dB...converting with gain 10dB...                      [                    ]   0%converting with gain 10dB...                      [##                  ]  13%converting with gain 10dB...                      [#####               ]  27%converting with gain 10dB...                      [########            ]  41%converting with gain 10dB...                      [##########          ]  54%converting with gain 10dB...                      [#############       ]  68%converting with gain 10dB...                      [################    ]  82%converting with gain 10dB...                      [################### ]  95%converting with gain 10dB...                      [####################] 100%
+
+number of channels: 2
+       sample rate: 44100 Hz
+         bit depth: 16 bits per sample
+         data size: 1458922 bytes
+       sample size: 4 bytes
+
+writting signal-gain-10dB.wav...
+plotting signal-gain-10dB.png...
+
+converting with gain -10dB...converting with gain -10dB...                     [                    ]   0%converting with gain -10dB...                     [##                  ]  13%converting with gain -10dB...                     [#####               ]  27%converting with gain -10dB...                     [########            ]  41%converting with gain -10dB...                     [##########          ]  54%converting with gain -10dB...                     [#############       ]  68%converting with gain -10dB...                     [################    ]  82%converting with gain -10dB...                     [################### ]  95%converting with gain -10dB...                     [####################] 100%
+
+number of channels: 2
+       sample rate: 44100 Hz
+         bit depth: 16 bits per sample
+         data size: 1458922 bytes
+       sample size: 4 bytes
+
+writting signal-gain-minus-10dB.wav...
+plotting signal-gain-minus-10dB.png...
+
+converting from 2 channels to mono...converting from 2 channels to mono...             [                    ]   0%converting from 2 channels to mono...             [#####               ]  27%converting from 2 channels to mono...             [##########          ]  54%converting from 2 channels to mono...             [################    ]  82%converting from 2 channels to mono...             [####################] 100%
+
+number of channels: 1
+       sample rate: 44100 Hz
+         bit depth: 16 bits per sample
+         data size: 729460 bytes
+       sample size: 2 bytes
+
+writting signal-original.wav...
+plotting signal-original.png...
+plotting spectrum-original.png...
+
+filtering bandpass range 300 to 3400 Hz... 
+
+setting bytes from data int... setting bytes from data int...                    [                    ]   0%setting bytes from data int...                    [#####               ]  27%setting bytes from data int...                    [##########          ]  54%setting bytes from data int...                    [################    ]  82%setting bytes from data int...                    [####################] 100%
+
+number of channels: 1
+       sample rate: 44100 Hz
+         bit depth: 16 bits per sample
+         data size: 729460 bytes
+       sample size: 2 bytes
+
+writting signal-narrowband.wav...
+plotting signal-narrowband.png...
+plotting spectrum-narrowband.png...
+
+filtering bandpass range 50 to 7000 Hz... 
+
+setting bytes from data int... setting bytes from data int...                    [                    ]   0%setting bytes from data int...                    [#####               ]  27%setting bytes from data int...                    [##########          ]  54%setting bytes from data int...                    [################    ]  82%setting bytes from data int...                    [####################] 100%
+
+number of channels: 1
+       sample rate: 44100 Hz
+         bit depth: 16 bits per sample
+         data size: 729460 bytes
+       sample size: 2 bytes
+
+writting signal-wideband.wav...
+plotting signal-wideband.png...
+plotting spectrum-wideband.png...

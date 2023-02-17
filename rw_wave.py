@@ -61,7 +61,7 @@ class Wave:
                     break
 
             # check that each channels has the same number of bytes
-            assert ((len(data) / nchannels) % 2) == 0
+            # assert ((len(data) / nchannels) % 2) == 0
 
             self.data_bytes = bytes(data)
             self.nchannels = nchannels

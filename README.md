@@ -19,7 +19,7 @@ python rw_wave.py
 
 Python dependencies in `requirements.txt` files
 
-The script take a file named signal.wav in entry. It must be a .wav in PCM format, with 1 or 2 channels maximum, a bit depth of 8, 16, 24 or 32 and any sample rate should do.
+The script take a file named signal.wav in entry. It must be a .wav in PCM format, with 1 or 2 channels maximum, a bit depth of 8, 16, 24 or 32 and any sample rate should do
 
 # Tools
 
@@ -61,3 +61,5 @@ https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Samples.html
 https://stackoverflow.com/questions/1149092/how-do-i-attenuate-a-wav-file-by-a-given-decibel-value
 
 https://stackoverflow.com/questions/70825086/python-lowpass-filter-with-only-numpy
+
+https://bigsoundbank.com
